@@ -2,13 +2,14 @@
 
 set -e
 
-convertMageMultiSite () {
+convertMageMultiSite() {
     local result=''
-    local sites=($(echo $1 | tr ';' "\n"))
+    local sites=()
 
-    for item in ${sites[@]}
-    do
-        item=($(echo ${item} | tr '=' "\n"))
+    mapfile -t sites < <(echo "${1}" | tr '=' "\n")
+
+    for item in "${sites[@]}"; do
+        mapfile -t item < <(echo "${item}" | tr '=' "\n")
         if [[ "$result" != '' ]]; then
             result="$result\n\t"
         fi
@@ -19,13 +20,14 @@ convertMageMultiSite () {
     echo "$result"
 }
 
-getServerNameMageMultiSite () {
+getServerNameMageMultiSite() {
     local result=''
-    local sites=($(echo $1 | tr ';' "\n"))
+    local sites=()
 
-    for item in ${sites[@]}
-    do
-        item=($(echo ${item} | tr '=' "\n"))
+    mapfile -t sites < <(echo "${1}" | tr '=' "\n")
+
+    for item in "${sites[@]}"; do
+        mapfile -t item < <(echo "${item}" | tr '=' "\n")
         if [[ "$result" != '' ]]; then
             result="$result "
         fi
@@ -36,7 +38,7 @@ getServerNameMageMultiSite () {
     echo "$result"
 }
 
-createVhostFile () {
+createVhostFile() {
     local server="$1 www.$1"
     local rootFolder=$2
     local isHttps=$3
@@ -50,41 +52,41 @@ createVhostFile () {
 
     if [[ "$isMage" != "true" ]]; then # Not Magento
         if [[ "$isHttps" != "true" ]]; then # Not use https
-            cp -f /etc/nginx/vhost/mysite.conf ${fileTemp}
+            cp -f /etc/nginx/vhost/mysite.conf "${fileTemp}"
         else # Use https
-            cp -f /etc/nginx/vhost/https/mysite.conf ${fileTemp}
+            cp -f /etc/nginx/vhost/https/mysite.conf "${fileTemp}"
         fi
     else # Magento
         if [[ "$isMageMulti" != "true" ]]; then # Magento single domain
-            if [[ "$isHttps" != "true" ]]; then  # Not use https
-                cp -f /etc/nginx/vhost/magento.conf ${fileTemp}
+            if [[ "$isHttps" != "true" ]]; then # Not use https
+                cp -f /etc/nginx/vhost/magento.conf "${fileTemp}"
             else # Use https
-                cp -f /etc/nginx/vhost/https/magento.conf ${fileTemp}
+                cp -f /etc/nginx/vhost/https/magento.conf "${fileTemp}"
             fi
         else # Magento multi domain
-            if [[ "$isHttps" != "true" ]]; then  # Not use https
-                cp -f /etc/nginx/vhost/magento-multi.conf ${fileTemp}
+            if [[ "$isHttps" != "true" ]]; then # Not use https
+                cp -f /etc/nginx/vhost/magento-multi.conf "${fileTemp}"
             else # Use https
-                cp /etc/nginx/vhost/https/magento-multi.conf ${fileTemp}
+                cp /etc/nginx/vhost/https/magento-multi.conf "${fileTemp}"
             fi
 
-            mageSitesFinal="$(convertMageMultiSite ${mageSites})"
-            server="$(getServerNameMageMultiSite ${mageSites})"
-            sed -i "s/!MAGE_MULTI_SITES!/$mageSitesFinal/g" ${fileTemp}
-            sed -i "s/!MAGE_MODE!/$mageMode/g" ${fileTemp}
-            sed -i "s/!MAGE_RUN_TYPE!/$mageType/g" ${fileTemp}
+            mageSitesFinal="$(convertMageMultiSite "${mageSites}")"
+            server="$(getServerNameMageMultiSite "${mageSites}")"
+            sed -i "s/!MAGE_MULTI_SITES!/$mageSitesFinal/g" "${fileTemp}"
+            sed -i "s/!MAGE_MODE!/$mageMode/g" "${fileTemp}"
+            sed -i "s/!MAGE_RUN_TYPE!/$mageType/g" "${fileTemp}"
         fi
     fi
 
     if [[ -e ${fileTemp} ]]; then
-        rootFolder=$(echo ${rootFolder} | sed "s/\//\\\\\//g")
-        sed -i "s/!SERVER_NAME!/$server/g" ${fileTemp}
-        sed -i "s/!ROOT_FOLDER!/$rootFolder/g" ${fileTemp}
+        rootFolder=$(echo "${rootFolder}" | sed "s/\//\\\\\//g")
+        sed -i "s/!SERVER_NAME!/$server/g" "${fileTemp}"
+        sed -i "s/!ROOT_FOLDER!/$rootFolder/g" "${fileTemp}"
     fi
 }
 
 if [[ ! -e /etc/nginx/conf.d/${server}.conf ]]; then
-    createVhostFile ${SERVER_NAME} ${ROOT_FOLDER} ${IS_HTTPS} ${IS_MAGENTO} ${IS_MAGENTO_MULTI} ${MAGENTO_MODE} ${MAGENTO_RUN_TYPE} ${MAGENTO_MULTI_SITES}
+    createVhostFile "${SERVER_NAME}" "${ROOT_FOLDER}" "${IS_HTTPS}" "${IS_MAGENTO}" "${IS_MAGENTO_MULTI}" "${MAGENTO_MODE}" "${MAGENTO_RUN_TYPE}" "${MAGENTO_MULTI_SITES}"
 fi
 
 # Config php
@@ -93,16 +95,15 @@ sed -i "s/!PHP_PORT!/$PHP_PORT/g" /etc/nginx/conf.d/php.conf
 
 # Update nginx config
 if [[ "${NGINX_CONFIG}" != '' ]]; then
-	NGINX_CONFIG=($(echo ${NGINX_CONFIG} | tr ',' "\n"))
-	for item in ${NGINX_CONFIG}
-	do
-	    item=($(echo ${item} | tr '=' "\n"))
-	    configName=$(echo "${item[0]}" | tr '[:upper:]' '[:lower:]')
-	    configValue=${item[1]}
+    mapfile -t NGINX_CONFIG < <(echo "${NGINX_CONFIG}" | tr ',' "\n")
+    for item in "${NGINX_CONFIG[@]}"; do
+        mapfile -t item < <(echo "${item}" | tr '=' "\n")
+        configName=$(echo "${item[0]}" | tr '[:upper:]' '[:lower:]')
+        configValue=${item[1]}
 
-	    sed -i "/${configName}/d" /etc/nginx/conf.d/zz-docker.conf
-		echo "$configName = $configValue" >> /etc/nginx/conf.d/zz-docker.conf
-	done
+        sed -i "/${configName}/d" /etc/nginx/conf.d/zz-docker.conf
+        printf "%s\t%s;\n" "${configName}" "${configValue}" >>/etc/nginx/conf.d/zz-docker.conf
+    done
 fi
 
 nginx -t
