@@ -2,6 +2,11 @@
 
 set -e
 
+if [[ -z ${SERVER_NAME} || -z ${PHP_SERVICE} ]]; then
+    exec "$@"
+    exit 1
+fi
+
 convertMageMultiSite() {
     local result=''
     local sites=()
@@ -49,26 +54,22 @@ createVhostFile() {
     local mageSites=$8
     local mageSitesFinal=''
     local fileTemp="/etc/nginx/conf.d/$1.conf"
+    local siteFolder="/etc/nginx/vhost/http"
+
+    if [[ "$isHttps" == "true" ]]; then
+        siteFolder="/etc/nginx/vhost/https"
+        if [[ ! -f /etc/nginx/ssl/nginx.crt ]]; then
+            creatSslKey
+        fi
+    fi
 
     if [[ "$isMage" != "true" ]]; then # Not Magento
-        if [[ "$isHttps" != "true" ]]; then # Not use https
-            cp -f /etc/nginx/vhost/mysite.conf "${fileTemp}"
-        else # Use https
-            cp -f /etc/nginx/vhost/https/mysite.conf "${fileTemp}"
-        fi
+        cp -f "${siteFolder}/mysite.conf" "${fileTemp}"
     else # Magento
         if [[ "$isMageMulti" != "true" ]]; then # Magento single domain
-            if [[ "$isHttps" != "true" ]]; then # Not use https
-                cp -f /etc/nginx/vhost/magento.conf "${fileTemp}"
-            else # Use https
-                cp -f /etc/nginx/vhost/https/magento.conf "${fileTemp}"
-            fi
+            cp -f "${siteFolder}/magento.conf" "${fileTemp}"
         else # Magento multi domain
-            if [[ "$isHttps" != "true" ]]; then # Not use https
-                cp -f /etc/nginx/vhost/magento-multi.conf "${fileTemp}"
-            else # Use https
-                cp /etc/nginx/vhost/https/magento-multi.conf "${fileTemp}"
-            fi
+            cp -f "${siteFolder}/magento-multi.conf" "${fileTemp}"
 
             mageSitesFinal="$(convertMageMultiSite "${mageSites}")"
             server="$(getServerNameMageMultiSite "${mageSites}")"
@@ -85,7 +86,7 @@ createVhostFile() {
     fi
 }
 
-if [[ ! -e /etc/nginx/conf.d/${server}.conf ]]; then
+if [[ ! -e /etc/nginx/conf.d/${SERVER_NAME}.conf ]]; then
     createVhostFile "${SERVER_NAME}" "${ROOT_FOLDER}" "${IS_HTTPS}" "${IS_MAGENTO}" "${IS_MAGENTO_MULTI}" "${MAGENTO_MODE}" "${MAGENTO_RUN_TYPE}" "${MAGENTO_MULTI_SITES}"
 fi
 

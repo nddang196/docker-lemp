@@ -52,10 +52,10 @@ services:
         volumes:
             - .:/project:rw
         depends_on:
-            - mariadb
+            - db
             - redis
             - elasticsearch
-    mariadb:
+    db:
         image: mariadb
         ports:
             - 3306:3306

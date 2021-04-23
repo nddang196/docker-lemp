@@ -50,7 +50,7 @@ services:
         volumes:
             - ${PROJECT_MAP_FOLDER}:${ROOT_FOLDER}:rw
         depends_on:
-            - mariadb
+            - db
             - redis
             - elasticsearch
     mail:
@@ -58,7 +58,7 @@ services:
         ports:
             - 1025
             - 8025
-    mariadb:
+    db:
         image: mariadb:${MARIA_VERSION}
         ports:
             - ${MARIA_PORT}:3306
