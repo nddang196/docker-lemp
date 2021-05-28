@@ -3,6 +3,8 @@
 set -e
 
 mkdir -p /etc/nginx/ssl
+rm -f /etc/nginx/ssl/nginx.key
+rm -f /etc/nginx/ssl/nginx.crt
 echo -e "\n\n\n\n\n\n\n" | openssl req -x509 -nodes -days 365 -newkey rsa:2048 -sha256 \
     -keyout /etc/nginx/ssl/nginx.key \
     -out /etc/nginx/ssl/nginx.crt

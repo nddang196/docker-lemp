@@ -40,14 +40,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure the ext library
-RUN PHP_PREFIX_VERSION=$((${PHP_VERSION%%.*} + 0)); \
-    suffix=${PHP_VERSION#*.}; \
-    PHP_SUFFIX_VERSION=$((${suffix%%.*} + 0)); \
-    if [ $PHP_PREFIX_VERSION -lt 7 ] || ([ $PHP_PREFIX_VERSION -eq 7 ] && [ $PHP_SUFFIX_VERSION -lt 2 ]); then \
+RUN PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
+    if [ $PHP_VERSION -lt 72 ]; then \
         apt-get update && \
         apt-get -y install libmcrypt-dev; \
     fi; \
-    if [ $PHP_PREFIX_VERSION -eq 7 ] && [ $PHP_SUFFIX_VERSION -gt 3 ]; then \
+    if [ $PHP_VERSION -gt 73 ]; then \
         docker-php-ext-configure gd --with-jpeg=/usr/include/ \
             --with-freetype=/usr/include/; \
     else \
@@ -91,27 +89,27 @@ RUN docker-php-ext-install -j$(nproc) \
                             pcntl \
                             zip
 
-RUN PHP_PREFIX_VERSION=$((${PHP_VERSION%%.*} + 0)); \
-    suffix=${PHP_VERSION#*.}; \
-    PHP_SUFFIX_VERSION=$((${suffix%%.*} + 0)); \
-    if [ $PHP_PREFIX_VERSION -lt 7 ] || ([ $PHP_PREFIX_VERSION -eq 7 ] && [ $PHP_SUFFIX_VERSION -lt 2 ]); then \
+RUN PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;"); \
+    if [ $PHP_VERSION -lt 72 ]); then \
         docker-php-ext-install mcrypt; \
         curl -o m2 https://files.magerun.net/n98-magerun2-3.2.0.phar; \
     else \
         curl -o m2 https://files.magerun.net/n98-magerun2.phar; \
     fi; \
-    if [ $PHP_PREFIX_VERSION -eq 7 ] && [ $PHP_SUFFIX_VERSION -lt 4 ]; then \
+    if [ $PHP_VERSION -ge 70 ] && [ $PHP_VERSION -lt 74 ]; then \
         docker-php-ext-install recode; \
     fi; \
-    if [ $PHP_PREFIX_VERSION -eq 7 ] && [ $PHP_SUFFIX_VERSION -gt 3 ]; then \
+    if [ $PHP_VERSION -gt 73 ]; then \
         pecl install -o -f xdebug; \
-    elif [ $PHP_PREFIX_VERSION -eq 7 ] && [ $PHP_SUFFIX_VERSION -gt 2 ]; then \
+    elif [ $PHP_VERSION -gt 72 ]; then \
         pecl install -o -f xdebug-2.7.1; \
     else \
         pecl install -o -f xdebug-2.6.1; \
     fi
+
 RUN pecl install -o -f redis \
                        geoip-1.1.1
+
 RUN docker-php-ext-enable redis \
                           geoip
 
