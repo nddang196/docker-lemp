@@ -37,14 +37,14 @@ getServerNameMageMultiSite() {
             result="$result "
         fi
 
-        result="$result${item[0]} www.${item[0]}"
+        result="$result${item[0]}"
     done
 
     echo "$result"
 }
 
 createVhostFile() {
-    local server="$1 www.$1"
+    local server=$1
     local rootFolder=$2
     local isHttps=$3
     local isMage=$4
@@ -58,9 +58,7 @@ createVhostFile() {
 
     if [[ "$isHttps" == "true" ]]; then
         siteFolder="/etc/nginx/vhost/https"
-        if [[ ! -f /etc/nginx/ssl/nginx.crt ]]; then
-            creatSslKey
-        fi
+        creatSslKey
     fi
 
     if [[ "$isMage" != "true" ]]; then # Not Magento
@@ -72,7 +70,6 @@ createVhostFile() {
             cp -f "${siteFolder}/magento-multi.conf" "${fileTemp}"
 
             mageSitesFinal="$(convertMageMultiSite "${mageSites}")"
-            server="$(getServerNameMageMultiSite "${mageSites}")"
             sed -i "s/!MAGE_MULTI_SITES!/$mageSitesFinal/g" "${fileTemp}"
             sed -i "s/!MAGE_MODE!/$mageMode/g" "${fileTemp}"
             sed -i "s/!MAGE_RUN_TYPE!/$mageType/g" "${fileTemp}"
